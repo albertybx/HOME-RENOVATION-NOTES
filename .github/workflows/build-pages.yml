@@ -1,0 +1,49 @@
+name: Build GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'index.html'
+      - 'assets/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Restore Vite entry page
+        run: cp vite-index.html index.html
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish built files to main root
+        run: |
+          rm -rf assets
+          cp dist/index.html index.html
+          cp -R dist/assets ./assets
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html assets
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+          else
+            git commit -m "Deploy built site [skip ci]"
+            git push
+          fi
