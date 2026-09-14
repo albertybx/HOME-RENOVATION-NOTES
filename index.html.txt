@@ -1,0 +1,1072 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
+import { 
+  getFirestore, 
+  collection, 
+  addDoc, 
+  query, 
+  onSnapshot, 
+  deleteDoc, 
+  doc, 
+  updateDoc, 
+  serverTimestamp, 
+  writeBatch
+} from 'firebase/firestore';
+import { 
+  Hammer, 
+  Lightbulb, 
+  Search, 
+  Plus, 
+  Save, 
+  Trash2, 
+  ExternalLink, 
+  Image as ImageIcon, 
+  X,
+  Menu,
+  ChevronRight,
+  BookOpen,
+  Pencil,
+  Folder,         
+  Check,
+  Cloud,
+  AlertTriangle,
+  FileText,
+  Bold,
+  Underline,
+  Palette,
+  List,
+  ListOrdered,
+  Database,
+  Copy,
+  Download,
+  Upload
+} from 'lucide-react';
+
+// --- Firebase Configuration ---
+const firebaseConfig = JSON.parse(__firebase_config);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+// Helper to get Public Data Paths
+const getPublicCollection = (colName) => collection(db, 'artifacts', appId, 'public', 'data', colName);
+const getPublicDoc = (colName, docId) => doc(db, 'artifacts', appId, 'public', 'data', colName, docId);
+
+// --- Components ---
+
+// 0.1 Rich Text Editor Component
+const RichTextEditor = ({ value, onChange, placeholder }) => {
+  const contentRef = useRef(null);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+
+  // 確保外部傳入新資料時，編輯器能正確同步
+  useEffect(() => {
+    if (contentRef.current && value !== contentRef.current.innerHTML) {
+      contentRef.current.innerHTML = value || '';
+    }
+  }, [value]);
+
+  const handleInput = () => {
+    if (contentRef.current) {
+      onChange(contentRef.current.innerHTML);
+    }
+  };
+
+  const execCommand = (command, arg = null) => {
+    document.execCommand(command, false, arg);
+    handleInput(); 
+    if (contentRef.current) contentRef.current.focus();
+  };
+
+  const colors = [
+    { name: '黑色', value: '#334155' }, 
+    { name: '紅色', value: '#ef4444' }, 
+    { name: '橘色', value: '#f97316' }, 
+    { name: '藍色', value: '#3b82f6' }, 
+    { name: '綠色', value: '#22c55e' }, 
+  ];
+
+  return (
+    <div className="flex flex-col border border-slate-200 rounded-2xl overflow-hidden bg-slate-50 focus-within:ring-4 focus-within:ring-orange-500/10 focus-within:border-orange-500/50 transition-all">
+      {/* Toolbar */}
+      <div className="flex items-center gap-1 p-2 border-b border-slate-200 bg-white">
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); execCommand('bold'); }} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="加粗"><Bold size={18} /></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); execCommand('underline'); }} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="底線"><Underline size={18} /></button>
+        <div className="relative">
+          <button type="button" onMouseDown={(e) => { e.preventDefault(); setShowColorPicker(!showColorPicker); }} className={`p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors ${showColorPicker ? 'bg-slate-100' : ''}`} title="文字顏色"><Palette size={18} /></button>
+          {showColorPicker && (
+            <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-lg p-2 flex gap-1 z-20">
+              {colors.map((c) => (
+                <button key={c.value} type="button" onMouseDown={(e) => { e.preventDefault(); execCommand('foreColor', c.value); setShowColorPicker(false); }} className="w-6 h-6 rounded-full border border-slate-100 hover:scale-110 transition-transform" style={{ backgroundColor: c.value }} title={c.name} />
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="w-px h-5 bg-slate-300 mx-1"></div>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); execCommand('insertOrderedList'); }} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="編號清單"><ListOrdered size={18} /></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); execCommand('insertUnorderedList'); }} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="符號清單"><List size={18} /></button>
+      </div>
+
+      {/* Editor Area */}
+      <div
+        ref={contentRef}
+        contentEditable
+        onInput={handleInput}
+        className="w-full p-5 min-h-[150px] outline-none text-slate-700 font-medium leading-relaxed resize-y overflow-auto text-lg list-inside-custom"
+        style={{ maxHeight: '400px' }}
+      />
+      {!value && (
+        <div 
+          className="absolute top-[60px] left-5 text-slate-400 font-medium pointer-events-none"
+          onClick={() => contentRef.current?.focus()}
+        >
+          {placeholder}
+        </div>
+      )}
+      
+      <style>{`
+        .list-inside-custom ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.6em; }
+        .list-inside-custom ol { list-style-type: decimal; padding-left: 1.5em; margin-bottom: 0.6em; }
+        .list-inside-custom li { margin-bottom: 0.5em; } 
+      `}</style>
+    </div>
+  );
+};
+
+// 0.2 Formatted Text Component
+const FormattedText = ({ text, className }) => {
+  if (!text) return null;
+  const lines = text.split('\n');
+  return (
+    <div className={className}>
+      {lines.map((line, index) => {
+        const listMatch = line.match(/^(\d+\.|[•-])\s+(.*)/);
+        if (listMatch) {
+          const marker = listMatch[1];
+          const content = listMatch[2];
+          return (
+            <div key={index} className="flex items-start gap-2 mb-5 last:mb-0">
+              <span className="shrink-0 font-bold text-slate-800 w-6 text-right mr-1">{marker}</span>
+              <div className="flex-1 min-w-0 leading-relaxed text-justify">{content}</div>
+            </div>
+          );
+        }
+        if (!line.trim()) return <div key={index} className="h-3" />; 
+        return <div key={index} className="mb-2 leading-relaxed">{line}</div>;
+      })}
+    </div>
+  );
+};
+
+// 0.3 Display Component
+const NoteContentDisplay = ({ content, isExpanded }) => {
+  if (!content) return null;
+  const isRichText = /<[a-z][\s\S]*>/i.test(content);
+
+  if (isRichText) {
+    return (
+      <div 
+        className={`text-slate-600 text-lg font-medium leading-relaxed rich-text-content ${!isExpanded ? 'line-clamp-3' : ''}`}
+        dangerouslySetInnerHTML={{ __html: content }}
+      />
+    );
+  }
+  return (
+    <div className={`text-slate-600 text-lg font-medium ${!isExpanded ? 'line-clamp-3' : ''}`}>
+      <FormattedText text={content} />
+    </div>
+  );
+};
+
+// 1. Navigation / Sidebar
+const Sidebar = ({ 
+  activeCategory, 
+  setActiveCategory, 
+  categories, 
+  isOpen, 
+  setIsOpen, 
+  onAddCategory, 
+  onDeleteCategory,
+  onOpenDataManagement
+}) => {
+  const [isAdding, setIsAdding] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+
+  const handleAddSubmit = (e) => {
+    e.preventDefault();
+    if (newCatName.trim()) {
+      onAddCategory(newCatName.trim());
+      setNewCatName("");
+      setIsAdding(false);
+    }
+  };
+
+  return (
+    <>
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-20 md:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+      
+      <div className={`
+        fixed md:static inset-y-0 left-0 z-30 w-72 
+        bg-white/40 backdrop-blur-2xl 
+        border-r border-white/50
+        text-slate-700 transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:translate-x-0 flex flex-col h-full shadow-[4px_0_24px_rgba(0,0,0,0.02)]
+      `}>
+        <div className="p-8 border-b border-white/30 flex items-start justify-between">
+          <div className="flex items-start gap-4">
+            {/* Custom House Pencil Logo */}
+            <svg 
+              width="40" 
+              height="40" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="1.8" 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              className="text-slate-900 shrink-0"
+            >
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+              <path d="M12 2L10 5H14L12 2Z" fill="currentColor" stroke="none" />
+            </svg>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-slate-800 uppercase leading-none flex flex-col">
+                <span>HOME</span>
+                <span>RENOVATION</span>
+                <span>NOTES</span>
+              </h1>
+            </div>
+          </div>
+          <button onClick={() => setIsOpen(false)} className="md:hidden text-slate-400 hover:text-slate-600">
+            <X size={20} />
+          </button>
+        </div>
+
+        <nav className="flex-1 p-6 overflow-y-auto custom-scrollbar">
+          <div className="flex items-center justify-between px-2 mb-4">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">您的分類</p>
+          </div>
+
+          <ul className="space-y-3">
+            <li>
+              <button
+                onClick={() => { setActiveCategory('all'); setIsOpen(false); }}
+                className={`w-full flex items-center gap-3 px-5 py-3.5 rounded-full transition-all duration-300 group ${activeCategory === 'all' ? 'bg-white shadow-md shadow-slate-200/50 text-orange-600 font-bold' : 'text-slate-900 hover:bg-white/60' }`}
+              >
+                <div className={`p-1.5 rounded-lg transition-colors ${activeCategory === 'all' ? 'bg-orange-50' : 'bg-transparent group-hover:bg-white'}`}>
+                  <BookOpen size={18} />
+                </div>
+                <span className="tracking-wide">所有筆記</span>
+                {activeCategory === 'all' && <ChevronRight size={16} className="ml-auto opacity-70" />}
+              </button>
+            </li>
+
+            {categories.map((cat) => (
+              <li key={cat.id} className="group relative">
+                <button
+                  onClick={() => { setActiveCategory(cat.id); setIsOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-5 py-3.5 rounded-full transition-all duration-300 ${activeCategory === cat.id ? 'bg-white shadow-md shadow-slate-200/50 text-orange-600 font-bold' : 'text-slate-900 hover:bg-white/60'}`}
+                >
+                   <div className={`p-1.5 rounded-lg transition-colors ${activeCategory === cat.id ? 'bg-orange-50' : 'bg-transparent group-hover:bg-white'}`}>
+                    <Folder size={18} />
+                  </div>
+                  <span className="truncate tracking-wide">{cat.label}</span>
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onDeleteCategory(cat.id); }}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1.5 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-red-50 rounded-full"
+                  title="刪除分類"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-8">
+            {isAdding ? (
+              <form onSubmit={handleAddSubmit} className="flex items-center gap-2 bg-white/60 p-2 rounded-2xl border border-white/50 shadow-sm backdrop-blur-sm">
+                <input autoFocus type="text" placeholder="輸入名稱..." value={newCatName} onChange={(e) => setNewCatName(e.target.value)} className="w-full bg-transparent text-slate-800 text-sm outline-none placeholder-slate-400 font-medium px-2" />
+                <button type="submit" disabled={!newCatName.trim()} className="p-1.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors disabled:opacity-50 shadow-sm"><Check size={14} /></button>
+                <button type="button" onClick={() => setIsAdding(false)} className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors"><X size={14} /></button>
+              </form>
+            ) : (
+              <button onClick={() => setIsAdding(true)} className="w-full flex items-center justify-center gap-2 p-3.5 rounded-full border-2 border-dashed border-slate-300 text-slate-500 hover:text-orange-500 hover:border-orange-300 hover:bg-orange-50/50 transition-all text-sm font-semibold tracking-wide">
+                <Plus size={18} />
+                新增自訂分類
+              </button>
+            )}
+          </div>
+        </nav>
+
+        <div className="p-6 border-t border-white/30">
+          <button 
+            onClick={onOpenDataManagement}
+            className="w-full flex items-center justify-center gap-2 text-slate-600 hover:text-slate-900 bg-white/40 hover:bg-white/70 py-3 rounded-2xl border border-white/50 transition-all font-bold text-sm shadow-sm"
+          >
+            <Database size={16} />
+            資料管理 (備份/還原)
+          </button>
+        </div>
+      </div>
+    </>
+  );
+};
+
+// 2. Main Content Area
+const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNote, onDeleteNote, onEditNote }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [viewingNote, setViewingNote] = useState(null);
+  
+  const activeCategoryLabel = activeCategory === 'all' 
+    ? '所有筆記' 
+    : categories.find(c => c.id === activeCategory)?.label || '未命名分類';
+
+  const filteredNotes = notes.filter(note => {
+    const matchesCategory = activeCategory === 'all' || note.category === activeCategory;
+    const searchLower = searchTerm.toLowerCase();
+    const textToSearch = `${note.title || ''} ${note.question || ''} ${note.answer || ''} ${note.tags?.join(' ') || ''}`.toLowerCase();
+    
+    return matchesCategory && textToSearch.includes(searchLower);
+  });
+
+  return (
+    <div className="flex-1 h-full overflow-hidden flex flex-col bg-[#F5F7FA] relative">
+      <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-gradient-to-br from-blue-100 to-purple-100 rounded-full blur-[100px] opacity-60 pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-gradient-to-tr from-orange-100 to-amber-100 rounded-full blur-[80px] opacity-60 pointer-events-none"></div>
+
+      <header className="px-8 py-6 flex flex-col sm:flex-row gap-6 justify-between items-center z-10 sticky top-0">
+        <div className="flex items-center gap-6 w-full sm:w-auto">
+          {/* PC Title */}
+          <h2 className="text-3xl font-bold text-slate-800 hidden md:block tracking-tight whitespace-nowrap">
+            {activeCategoryLabel}
+          </h2>
+          
+          <div className="w-full">
+            {/* Mobile: Search bar narrower to fit buttons */}
+            <div className="relative w-[calc(100%-3.5rem)] md:w-96 group">
+              <input
+                type="text"
+                placeholder="搜尋問題、建議..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-4 pr-12 py-3 bg-white/60 border border-white/80 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:bg-white focus:border-white transition-all text-slate-700 font-medium placeholder-slate-400 backdrop-blur-md shadow-sm"
+              />
+              <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors pointer-events-none">
+                <Search size={20} />
+              </div>
+            </div>
+            
+            {/* Mobile Title: Displayed below search bar, moved up to mt-5 */}
+            <h2 className="md:hidden mt-5 ml-2 text-lg font-bold text-slate-600 tracking-tight flex items-center gap-2">
+              <Folder size={16} className="text-orange-500" />
+              {activeCategoryLabel}
+            </h2>
+          </div>
+        </div>
+        
+        {/* PC Add Button: Circular, Icon only */}
+        <button 
+          onClick={onAddNote}
+          className="hidden md:flex items-center justify-center w-12 h-12 bg-orange-500 hover:bg-orange-600 text-white rounded-full transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 hover:-translate-y-0.5"
+          title="新增諮詢筆記"
+        >
+          <Plus size={24} />
+        </button>
+      </header>
+
+      {/* 限制彈出視窗(Popup) 不會超過這個內容容器 */}
+      <div className="relative flex-1 overflow-hidden flex flex-col">
+        {/* 取消 overflow-hidden 切換，固定使用 overflow-y-auto 避免寬度重算閃爍 */}
+        <div className="flex-1 p-4 sm:p-8 lg:px-16 xl:px-24 custom-scrollbar z-0 overflow-y-auto">
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-orange-500"></div>
+            </div>
+          ) : filteredNotes.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full pb-20 text-slate-400">
+              {categories.length === 0 ? (
+                <>
+                   <div className="bg-white/60 p-8 rounded-3xl mb-6 shadow-xl shadow-slate-200/50 backdrop-blur-sm">
+                     <Folder size={64} className="text-slate-300" />
+                   </div>
+                   <p className="text-xl font-bold text-slate-600">建立您的第一個分類</p>
+                   <p className="text-base mt-2 font-medium text-slate-400">點擊左側欄位的「+」開始整理</p>
+                </>
+              ) : (
+                <>
+                  <div className="bg-white/60 p-8 rounded-3xl mb-6 shadow-xl shadow-slate-200/50 backdrop-blur-sm">
+                    <Lightbulb size={64} className="text-orange-300" />
+                  </div>
+                  <p className="text-xl font-bold text-slate-600">此分類尚無筆記</p>
+                  <p className="text-base mt-2 font-medium text-slate-400">紀錄專家建議，打造完美居家</p>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="columns-1 md:columns-2 2xl:columns-3 gap-6 pb-20 space-y-6">
+              {filteredNotes.map(note => (
+                <NoteCard 
+                  key={note.id} 
+                  note={note} 
+                  categoryLabel={categories.find(c => c.id === note.category)?.label || '未知分類'}
+                  onDelete={onDeleteNote} 
+                  onEdit={onEditNote} 
+                  onView={() => setViewingNote(note)} // 點擊時設定目前的筆記以觸發 Popup
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 獨立彈出視窗 (僅在此 relative 區塊內置中放大) */}
+        <ViewNoteModal 
+          note={viewingNote}
+          categoryLabel={viewingNote ? (categories.find(c => c.id === viewingNote.category)?.label || '未知分類') : ''}
+          onClose={() => setViewingNote(null)}
+          onEdit={(note) => { setViewingNote(null); onEditNote(note); }}
+          onDelete={(id) => { setViewingNote(null); onDeleteNote(id); }}
+        />
+      </div>
+    </div>
+  );
+};
+
+// 2.5 View Note Modal Component (負責呈現 Popup，並限定在內容區域)
+const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
+  const [isClosing, setIsClosing] = useState(false);
+
+  // 當開啟新的筆記時，重置關閉狀態
+  useEffect(() => {
+    if (note) setIsClosing(false);
+  }, [note]);
+
+  if (!note) return null;
+  const displayTitle = note.title || note.question;
+  const displayOverview = note.title ? note.question : null;
+
+  // 處理關閉動畫：先觸發 isClosing 狀態，300毫秒後再實際執行關閉
+  const handleCloseAnim = () => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setTimeout(() => onClose(), 300);
+  };
+
+  const handleEditAnim = () => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setTimeout(() => onEdit(note), 300);
+  };
+
+  const handleDeleteAnim = () => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setTimeout(() => onDelete(note.id), 300);
+  };
+
+  return (
+    <div 
+      className={`absolute inset-0 bg-black/25 z-[60] flex items-center justify-center p-4 sm:p-6 backdrop-blur-sm ${isClosing ? 'animate-fade-exit' : 'animate-fade-enter'}`}
+      onClick={(e) => { e.stopPropagation(); handleCloseAnim(); }}
+    >
+      {/* 外層容器：加入 transform-gpu 與 will-change 確保硬體加速，避免縮放時閃爍 */}
+      <div 
+        className={`bg-white rounded-3xl w-full max-w-xl sm:max-w-2xl max-h-[95%] shadow-2xl flex flex-col relative origin-center transform-gpu will-change-[transform,opacity] ${isClosing ? 'animate-modal-exit' : 'animate-modal-enter'}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 右上角固定關閉按鈕 */}
+        <button 
+          onClick={handleCloseAnim} 
+          className="absolute top-4 right-4 z-[70] p-2 bg-white/80 hover:bg-white text-slate-800 rounded-full backdrop-blur-md shadow-md border border-slate-200 transition-transform hover:scale-110"
+          title="關閉"
+        >
+          <X size={20} />
+        </button>
+
+        {/* 內層捲動區域：包含圖片與文字內容。加入 overscroll-contain 避免在底部滑動時牽連背景 */}
+        <div className="overflow-y-auto overscroll-contain custom-scrollbar flex flex-col w-full h-full rounded-3xl">
+          {/* 放大後的等比例圖卡 */}
+          {note.imageUrl && (
+            <div className="w-full h-56 sm:h-72 shrink-0 relative bg-slate-100">
+              <img src={note.imageUrl} alt="Reference" className="w-full h-full object-cover" onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/800x450?text=No+Image"; }} />
+              <div className="absolute top-4 left-4 z-20">
+                 <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-white/95 text-slate-800 shadow-lg backdrop-blur-md border border-white/50 tracking-wide">{categoryLabel}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Popup 詳細內容區 */}
+          <div className="px-7 pt-5 pb-6 flex flex-col flex-1 relative z-0">
+            {!note.imageUrl && (
+              <div className="mb-5"><span className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100/80 text-slate-600 border border-slate-200 tracking-wide">{categoryLabel}</span></div>
+            )}
+            
+            <h3 className="font-bold text-xl text-slate-800 mb-2 leading-relaxed tracking-tight">
+              {displayTitle}
+            </h3>
+            
+            {displayOverview && (
+              <div className="mb-4 text-slate-500 text-sm leading-relaxed border-l-2 border-slate-300 pl-3">
+                {displayOverview}
+              </div>
+            )}
+
+            <div className="mb-5">
+              <div className="font-bold text-base text-slate-700 mb-3 flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-amber-100 text-amber-600"><Lightbulb size={16} fill="currentColor" /></div>
+                專家建議：
+              </div>
+              <NoteContentDisplay content={note.answer} isExpanded={true} />
+            </div>
+
+            {/* 彈出視窗底層的按鈕區 */}
+            <div className="mt-auto pt-3 border-t border-slate-200/60 flex items-center justify-between">
+              <div className="flex gap-2">
+                {note.sourceUrl && (
+                  <a href={note.sourceUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-slate-400 hover:text-orange-500 transition-colors text-sm font-bold px-2 py-1 rounded-lg hover:bg-orange-50/50" title="查看來源連結">
+                    <ExternalLink size={16} /><span className="text-xs">來源</span>
+                  </a>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button onClick={handleEditAnim} className="flex items-center gap-1.5 px-4 py-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors font-bold border border-transparent hover:border-blue-100 text-sm"><Pencil size={16} />編輯</button>
+                <button onClick={handleDeleteAnim} className="flex items-center gap-1.5 px-4 py-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors font-bold border border-transparent hover:border-red-100 text-sm"><Trash2 size={16} />刪除</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 3. NoteCard Component
+const NoteCard = ({ note, categoryLabel, onDelete, onEdit, onView }) => {
+  const displayTitle = note.title || note.question;
+  const displayOverview = note.title ? note.question : null;
+
+  return (
+    <div 
+      onClick={onView}
+      className="group relative flex flex-col overflow-hidden bg-white/60 backdrop-blur-xl border border-white/60 rounded-3xl shadow-[0_10px_30px_-10px_rgba(0,0,0,0.08)] hover:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)] hover:-translate-y-2 hover:bg-white/80 transition-all duration-300 ease-out cursor-pointer break-inside-avoid mb-6 w-full"
+    >
+      {note.imageUrl && (
+        <div className="h-36 w-full overflow-hidden bg-slate-100 relative shrink-0">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent z-10 opacity-60"></div>
+           <img src={note.imageUrl} alt="Reference" className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/400x200?text=No+Image"; }} />
+          <div className="absolute top-4 right-4 z-20">
+             <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-white/90 text-slate-800 shadow-lg backdrop-blur-md border border-white/50 tracking-wide">{categoryLabel}</span>
+          </div>
+        </div>
+      )}
+      
+      <div className="px-7 pt-5 pb-4 flex flex-col flex-1 relative z-0">
+        {!note.imageUrl && (
+          <div className="mb-5"><span className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100/80 text-slate-600 border border-slate-200 tracking-wide">{categoryLabel}</span></div>
+        )}
+
+        <h3 className="font-bold text-xl text-slate-800 mb-2 leading-relaxed tracking-tight line-clamp-1">
+          {displayTitle}
+        </h3>
+        
+        {displayOverview && (
+          <div className="mb-4 text-slate-500 text-sm leading-relaxed border-l-2 border-slate-300 pl-3 line-clamp-2">
+            {displayOverview}
+          </div>
+        )}
+
+        <div className="mt-auto pt-3 border-t border-slate-200/60 flex items-center justify-between">
+          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+            {note.sourceUrl && (
+              <a href={note.sourceUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-slate-400 hover:text-orange-500 transition-colors text-sm font-bold px-2 py-1 rounded-lg hover:bg-orange-50/50" title="查看來源連結">
+                <ExternalLink size={16} /><span className="text-xs">來源</span>
+              </a>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200" onClick={(e) => e.stopPropagation()}>
+            <button onClick={(e) => { e.stopPropagation(); onEdit(note); }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50/80 rounded-full transition-colors" title="編輯筆記"><Pencil size={18} /></button>
+            <button onClick={(e) => { e.stopPropagation(); onDelete(note.id); }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50/80 rounded-full transition-colors" title="刪除筆記"><Trash2 size={18} /></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 4. Add/Edit Note Modal
+const AddNoteModal = ({ isOpen, onClose, user, appId, db, editingNote, categories, onCreateCategoryFirst }) => {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({ category: '', title: '', question: '', answer: '', sourceUrl: '', imageUrl: '' });
+
+  // 確保打開表單時正確載入對應的資料
+  useEffect(() => {
+    if (isOpen) {
+      if (editingNote) {
+        setFormData({
+          category: editingNote.category || '',
+          title: editingNote.title || '',
+          question: editingNote.question || '',
+          answer: editingNote.answer || '',
+          sourceUrl: editingNote.sourceUrl || '',
+          imageUrl: editingNote.imageUrl || ''
+        });
+      } else {
+        setFormData({ category: categories.length > 0 ? categories[0].id : '', title: '', question: '', answer: '', sourceUrl: '', imageUrl: '' });
+      }
+    }
+  }, [editingNote, isOpen, categories]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!user) return;
+    if (!formData.category && categories.length === 0) { alert("請先建立至少一個分類！"); return; }
+    setLoading(true);
+    try {
+      if (editingNote) {
+        await updateDoc(getPublicDoc('notes', editingNote.id), { ...formData, updatedAt: serverTimestamp() });
+      } else {
+        await addDoc(getPublicCollection('notes'), { ...formData, category: formData.category || (categories[0]?.id), timestamp: serverTimestamp() });
+      }
+      onClose();
+    } catch (error) { console.error("Error saving note: ", error); alert("儲存失敗，請檢查網路連線。"); } finally { setLoading(false); }
+  };
+
+  const simulateAIResponse = () => {
+    if (!formData.title && !formData.question) return;
+    setLoading(true);
+    setTimeout(() => {
+      let mockAnswer = `<div><b>專家建議：</b></div><ol><li>根據您的問題，建議先確認現場管線與結構狀況。</li><li>一般來說，預算配置建議以基礎工程（水電、泥作）佔50%以上為佳，裝飾性裝潢可後續補強。</li><li>注意施工期間的保護工程，避免損傷原有設施。</li></ol>`;
+      let mockImage = "https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=600";
+      setFormData(prev => ({ ...prev, answer: mockAnswer, imageUrl: mockImage, sourceUrl: 'https://example.com/expert-advice' }));
+      setLoading(false);
+    }, 1500);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[80] flex items-center justify-center p-4">
+      <div className="bg-white/90 backdrop-blur-xl rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-white/50">
+        <div className="p-8 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white/80 backdrop-blur-md z-10">
+          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+            <div className={`p-2 rounded-xl ${editingNote ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
+              {editingNote ? <Pencil size={20} /> : <Plus size={20} />}
+            </div>
+            {editingNote ? "編輯諮詢筆記" : "新增諮詢筆記"}
+          </h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 rounded-full p-2 hover:bg-slate-100 transition-colors"><X size={24} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-8 space-y-8">
+          {categories.length === 0 && (
+            <div className="bg-orange-50 border border-orange-200 text-orange-800 p-4 rounded-2xl text-sm flex items-center justify-between shadow-sm">
+              <span className="font-bold">⚠️ 您尚未建立任何分類，無法儲存筆記。</span>
+              <button type="button" onClick={() => { onClose(); onCreateCategoryFirst(); }} className="text-orange-600 font-bold hover:bg-orange-100 px-4 py-2 rounded-xl transition-colors">去建立分類</button>
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-3">
+              <label className="text-sm font-bold text-slate-700 ml-1">選擇分類</label>
+              <div className="relative">
+                <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} disabled={categories.length === 0} className="w-full p-4 pl-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 outline-none disabled:bg-slate-100 disabled:text-slate-400 font-bold appearance-none transition-all cursor-pointer hover:bg-white">
+                  {categories.length === 0 ? (<option>無分類 (請先新增)</option>) : (categories.map(cat => (<option key={cat.id} value={cat.id}>{cat.label}</option>)))}
+                </select>
+                <ChevronRight className="absolute right-4 top-1/2 transform -translate-y-1/2 rotate-90 text-slate-400 pointer-events-none" size={18} />
+              </div>
+            </div>
+             <div className="space-y-3">
+              <label className="text-sm font-bold text-slate-700 ml-1">圖片網址 (選填)</label>
+              <div className="relative group">
+                <ImageIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" size={20} />
+                <input type="text" placeholder="https://..." value={formData.imageUrl} onChange={(e) => setFormData({...formData, imageUrl: e.target.value})} className="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 outline-none font-medium transition-all hover:bg-white" />
+              </div>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <label className="text-sm font-bold text-slate-700 ml-1">標題</label>
+            <input type="text" required placeholder="例如：浴室防水工程詢問" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 outline-none font-bold text-lg transition-all hover:bg-white" />
+          </div>
+          <div className="space-y-3">
+            <label className="text-sm font-bold text-slate-700 ml-1">問題概述</label>
+            <div className="relative group">
+               <FileText className="absolute left-4 top-4 text-slate-400 group-focus-within:text-orange-500 transition-colors" size={20} />
+              <textarea rows={3} placeholder="請簡述您的具體問題或狀況..." value={formData.question} onChange={(e) => setFormData({...formData, question: e.target.value})} className="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 outline-none font-medium text-base transition-all hover:bg-white resize-none" />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button type="button" onClick={simulateAIResponse} disabled={(!formData.question && !formData.title) || loading} className="text-sm flex items-center gap-2 text-indigo-600 bg-indigo-50 border border-indigo-100 font-bold hover:bg-indigo-100 px-5 py-2.5 rounded-xl transition-colors disabled:opacity-50 disabled:bg-slate-50 disabled:text-slate-400"><Lightbulb size={16} />{loading ? "專家思考中..." : "自動生成專家建議 (模擬)"}</button>
+          </div>
+          <div className="space-y-3">
+            <label className="text-sm font-bold text-slate-700 ml-1">專家建議 / 解決方案</label>
+            <RichTextEditor value={formData.answer} onChange={(newContent) => setFormData({...formData, answer: newContent})} placeholder="紀錄最佳方案，使用工具列進行排版..." />
+          </div>
+          <div className="space-y-3">
+            <label className="text-sm font-bold text-slate-700 ml-1">參考來源連結 (選填)</label>
+            <div className="relative group">
+              <ExternalLink className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" size={20} />
+              <input type="text" placeholder="https://..." value={formData.sourceUrl} onChange={(e) => setFormData({...formData, sourceUrl: e.target.value})} className="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/50 outline-none font-medium transition-all hover:bg-white" />
+            </div>
+          </div>
+          <div className="pt-8 flex gap-5">
+            <button type="button" onClick={onClose} className="flex-1 py-4 px-6 rounded-2xl text-slate-600 font-bold hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200">取消</button>
+            <button type="submit" disabled={loading || categories.length === 0} className={`flex-1 py-4 px-6 rounded-2xl text-white font-bold text-lg transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-3 ${editingNote ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-blue-500/30' : 'bg-slate-900 hover:bg-slate-800 hover:shadow-slate-900/30'} disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none transform hover:-translate-y-1`}>{loading ? (<div className="h-6 w-6 border-2 border-white border-t-transparent rounded-full animate-spin" />) : (<><Save size={20} />{editingNote ? "更新筆記" : "儲存筆記"}</>)}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// 5. Delete Confirmation Modal
+const ConfirmModal = ({ isOpen, onClose, onConfirm, message }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[90] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl border border-white/50 p-6 transform transition-all scale-100">
+        <div className="flex flex-col items-center text-center">
+          <div className="p-3 bg-red-100 text-red-500 rounded-full mb-4"><AlertTriangle size={32} /></div>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">確定要刪除嗎？</h3>
+          <p className="text-slate-600 mb-6">{message}</p>
+          <div className="flex gap-3 w-full">
+            <button onClick={onClose} className="flex-1 py-2.5 px-4 rounded-xl text-slate-600 font-bold hover:bg-slate-100 transition-colors">取消</button>
+            <button onClick={onConfirm} className="flex-1 py-2.5 px-4 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold transition-colors shadow-lg shadow-red-500/30">確認刪除</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 6. Data Management Modal (Backup/Restore)
+const DataManagementModal = ({ isOpen, onClose, notes, categories }) => {
+  const [activeTab, setActiveTab] = useState('export'); // 'export' or 'import'
+  const [importData, setImportData] = useState('');
+  const [statusMsg, setStatusMsg] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  if (!isOpen) return null;
+
+  const getExportData = () => {
+    return JSON.stringify({
+      version: 1,
+      timestamp: new Date().toISOString(),
+      categories: categories,
+      notes: notes
+    }, null, 2);
+  };
+
+  const handleCopy = () => {
+    const textToCopy = getExportData();
+    // Fallback using document.execCommand('copy')
+    const textarea = document.createElement('textarea');
+    textarea.value = textToCopy;
+    textarea.style.position = 'fixed';  // Prevent scrolling to bottom of page in MS Edge.
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      setStatusMsg('✅ 資料已複製到剪貼簿！');
+      setTimeout(() => setStatusMsg(''), 3000);
+    } catch (err) {
+      console.error('Fallback: Oops, unable to copy', err);
+      setStatusMsg('❌ 複製失敗，請手動選取複製');
+    }
+    document.body.removeChild(textarea);
+  };
+
+  const handleImport = async () => {
+    if (!importData.trim()) return;
+    setIsLoading(true);
+    setStatusMsg('');
+
+    try {
+      const data = JSON.parse(importData);
+      if (!data.notes && !data.categories) {
+        throw new Error("無效的資料格式");
+      }
+
+      const batch = writeBatch(db);
+      const categoryIdMap = {};
+
+      if (data.categories) {
+        data.categories.forEach(cat => {
+          const oldId = cat.id;
+          const newCatRef = doc(getPublicCollection('categories')); 
+          const { id, ...catData } = cat; 
+          categoryIdMap[oldId] = newCatRef.id;
+          batch.set(newCatRef, { ...catData, createdAt: serverTimestamp() });
+        });
+      }
+      
+      if (data.notes) {
+        data.notes.forEach(note => {
+          const newNoteRef = doc(getPublicCollection('notes'));
+          const { id, ...noteData } = note;
+          // Update category ID to new ID if exists
+          if (noteData.category && categoryIdMap[noteData.category]) {
+            noteData.category = categoryIdMap[noteData.category];
+          }
+          batch.set(newNoteRef, { ...noteData, timestamp: serverTimestamp() });
+        });
+      }
+
+      await batch.commit();
+      setStatusMsg(`✅ 成功還原 ${data.notes?.length || 0} 筆筆記！`);
+      setImportData('');
+      setTimeout(() => {
+        onClose();
+        setStatusMsg('');
+      }, 1500);
+
+    } catch (e) {
+      console.error(e);
+      setStatusMsg('❌ 還原失敗：資料格式錯誤');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[80] flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl border border-white/50 overflow-hidden flex flex-col max-h-[80vh]">
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <Database size={20} className="text-blue-600" />
+            資料備份與還原
+          </h2>
+          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={20} /></button>
+        </div>
+        
+        <div className="flex border-b border-slate-200">
+          <button onClick={() => setActiveTab('export')} className={`flex-1 py-4 font-bold text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'export' ? 'bg-white text-blue-600 border-b-2 border-blue-600' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>
+            <Download size={16} /> 匯出備份 (Export)
+          </button>
+          <button onClick={() => setActiveTab('import')} className={`flex-1 py-4 font-bold text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'import' ? 'bg-white text-orange-600 border-b-2 border-orange-600' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>
+            <Upload size={16} /> 還原資料 (Import)
+          </button>
+        </div>
+
+        <div className="p-6 flex-1 overflow-y-auto">
+          {activeTab === 'export' ? (
+            <div className="space-y-4">
+              <p className="text-sm text-slate-500">如果程式碼更新導致資料消失，請先複製此處的資料代碼，待更新完成後再使用「還原功能」貼上。</p>
+              <div className="relative">
+                <textarea readOnly value={getExportData()} className="w-full h-64 p-4 bg-slate-800 text-green-400 font-mono text-xs rounded-xl focus:outline-none resize-none custom-scrollbar" />
+                <button onClick={handleCopy} className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg backdrop-blur-sm transition-colors" title="複製到剪貼簿"><Copy size={16} /></button>
+              </div>
+              <div className="flex justify-center">
+                <button onClick={handleCopy} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold transition-colors flex items-center gap-2"><Copy size={18} /> 複製全部資料代碼</button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-slate-500">請將之前備份的資料代碼貼在下方，點擊還原即可恢復分類與筆記。</p>
+              <textarea placeholder='在此貼上 JSON 資料...' value={importData} onChange={(e) => setImportData(e.target.value)} className="w-full h-64 p-4 bg-slate-50 border border-slate-200 text-slate-700 font-mono text-xs rounded-xl focus:ring-2 focus:ring-orange-500/50 outline-none resize-none custom-scrollbar" />
+              <div className="flex justify-center">
+                <button onClick={handleImport} disabled={isLoading || !importData} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-xl font-bold transition-colors flex items-center gap-2 disabled:opacity-50">
+                  {isLoading ? <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"/> : <Upload size={18} />}
+                  開始還原資料
+                </button>
+              </div>
+            </div>
+          )}
+          {statusMsg && <div className="mt-4 p-3 bg-slate-100 text-slate-800 text-center font-bold rounded-xl animate-bounce">{statusMsg}</div>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Main App Component ---
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [notes, setNotes] = useState([]);
+  const [categories, setCategories] = useState([]); 
+  const [loading, setLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDataModalOpen, setIsDataModalOpen] = useState(false); 
+  const [editingNote, setEditingNote] = useState(null);
+  const [activeCategory, setActiveCategory] = useState('all');
+
+  const [deleteState, setDeleteState] = useState({ isOpen: false, type: null, id: null, message: '' });
+
+  useEffect(() => {
+    const initAuth = async () => {
+      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        await signInWithCustomToken(auth, __initial_auth_token);
+      } else {
+        await signInAnonymously(auth);
+      }
+    };
+    initAuth();
+    
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (!currentUser) setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const notesQuery = query(getPublicCollection('notes'));
+    const unsubNotes = onSnapshot(notesQuery, (snapshot) => {
+      const notesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      notesData.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+      setNotes(notesData);
+      setLoading(false);
+    }, (error) => console.error("Error fetching notes:", error));
+
+    const categoriesQuery = query(getPublicCollection('categories'));
+    const unsubCats = onSnapshot(categoriesQuery, (snapshot) => {
+      const catData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      catData.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+      setCategories(catData);
+    }, (error) => console.error("Error fetching categories:", error));
+
+    return () => { unsubNotes(); unsubCats(); };
+  }, [user]);
+
+  const handleAddCategory = async (name) => {
+    if (!user) return;
+    try { await addDoc(getPublicCollection('categories'), { label: name, createdAt: serverTimestamp() }); } catch (error) { console.error("Error adding category:", error); }
+  };
+
+  const handleDeleteCategoryRequest = (catId) => { setDeleteState({ isOpen: true, type: 'category', id: catId, message: "分類下的筆記不會被刪除，但會失去分類標籤。" }); };
+  const handleDeleteNoteRequest = (noteId) => { setDeleteState({ isOpen: true, type: 'note', id: noteId, message: "刪除後無法復原，您確定嗎？" }); };
+
+  const confirmDelete = async () => {
+    if (!user || !deleteState.id) return;
+    try {
+      if (deleteState.type === 'category') {
+        await deleteDoc(getPublicDoc('categories', deleteState.id));
+        if (activeCategory === deleteState.id) setActiveCategory('all');
+      } else if (deleteState.type === 'note') {
+        await deleteDoc(getPublicDoc('notes', deleteState.id));
+      }
+    } catch (error) { console.error("Error deleting item:", error); } finally { setDeleteState({ isOpen: false, type: null, id: null, message: '' }); }
+  };
+
+  const handleEditNote = (note) => { setEditingNote(note); setIsAddModalOpen(true); };
+  const handleAddNote = () => { setEditingNote(null); setIsAddModalOpen(true); };
+  const handleCreateCategoryFirst = () => { setIsSidebarOpen(true); };
+
+  return (
+    <div className="flex h-screen w-full bg-slate-50 text-slate-900" style={{ fontFamily: "'Noto Sans TC', sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.5); border-radius: 20px; }
+        
+        /* 恢復富文本內容中的列表圓點與數字樣式 */
+        .rich-text-content ul { list-style-type: disc; padding-left: 1.2em; margin-bottom: 0.6em; }
+        .rich-text-content ol { list-style-type: decimal; padding-left: 1.2em; margin-bottom: 0.6em; }
+        .rich-text-content li { margin-bottom: 0.5em; }
+
+        /* Popup 動畫效果 (使用 both 確保不會有任何一瞬間的閃爍，並加上 will-change 硬體加速) */
+        @keyframes modalEnter {
+          from { opacity: 0; transform: scale(0.65) translateY(20px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes modalExit {
+          from { opacity: 1; transform: scale(1) translateY(0); }
+          to { opacity: 0; transform: scale(0.65) translateY(20px); }
+        }
+        @keyframes fadeEnter {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeExit {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+        
+        .animate-modal-enter { 
+          animation: modalEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; 
+          will-change: transform, opacity;
+        }
+        .animate-modal-exit { 
+          animation: modalExit 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; 
+          will-change: transform, opacity;
+        }
+        .animate-fade-enter { animation: fadeEnter 0.3s ease-out both; }
+        .animate-fade-exit { animation: fadeExit 0.3s ease-in both; }
+      `}</style>
+
+      {/* Mobile Menu & Add Buttons Container */}
+      <div className="md:hidden fixed top-7 right-4 z-40 flex flex-col gap-4 items-center">
+        <button 
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="bg-white/80 backdrop-blur-md p-2 rounded-lg shadow-md text-slate-700 border border-white/40 hover:bg-white transition-colors"
+        >
+          <Menu />
+        </button>
+        <button 
+          onClick={handleAddNote}
+          className="bg-orange-500 hover:bg-orange-600 text-white p-3 rounded-full shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 transition-all hover:-translate-y-0.5 active:scale-95"
+        >
+          <Plus size={24} />
+        </button>
+      </div>
+
+      <Sidebar 
+        activeCategory={activeCategory} 
+        setActiveCategory={setActiveCategory}
+        categories={categories}
+        isOpen={isSidebarOpen}
+        setIsOpen={setIsSidebarOpen}
+        onAddCategory={handleAddCategory}
+        onDeleteCategory={handleDeleteCategoryRequest}
+        onOpenDataManagement={() => setIsDataModalOpen(true)}
+      />
+
+      <MainContent 
+        user={user}
+        notes={notes}
+        categories={categories}
+        loading={loading}
+        activeCategory={activeCategory}
+        onAddNote={handleAddNote}
+        onEditNote={handleEditNote}
+        onDeleteNote={handleDeleteNoteRequest}
+      />
+
+      <AddNoteModal 
+        isOpen={isAddModalOpen} 
+        onClose={() => setIsAddModalOpen(false)}
+        user={user}
+        appId={appId}
+        db={db}
+        editingNote={editingNote}
+        categories={categories}
+        onCreateCategoryFirst={handleCreateCategoryFirst}
+      />
+
+      <ConfirmModal 
+        isOpen={deleteState.isOpen}
+        onClose={() => setDeleteState({ ...deleteState, isOpen: false })}
+        onConfirm={confirmDelete}
+        message={deleteState.message}
+      />
+
+      <DataManagementModal 
+        isOpen={isDataModalOpen}
+        onClose={() => setIsDataModalOpen(false)}
+        notes={notes}
+        categories={categories}
+      />
+    </div>
+  );
+}
