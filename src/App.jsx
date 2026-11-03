@@ -339,7 +339,7 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
             type="button"
             onClick={onAddNote}
             aria-label="新增筆記"
-            className="group absolute right-0 top-0 z-30 flex h-12 w-12 items-center gap-2 overflow-hidden whitespace-nowrap rounded-full bg-orange-500 px-3 text-white shadow-lg shadow-orange-500/20 transition-[width,background-color,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:w-[124px] hover:bg-orange-600 hover:shadow-orange-500/30 focus-visible:w-[124px] focus-visible:bg-orange-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/20 motion-reduce:transition-none"
+            className="expanding-note-button group absolute right-0 top-0 z-30 flex h-12 items-center gap-2 overflow-hidden whitespace-nowrap rounded-full bg-orange-500 text-white shadow-lg shadow-orange-500/20 hover:bg-orange-600 hover:shadow-orange-500/30 focus-visible:bg-orange-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/20 motion-reduce:transition-none"
           >
             <Plus
               size={24}
@@ -905,6 +905,24 @@ export default function App() {
         @keyframes fadeEnter { from { opacity: 0; } to { opacity: 1; } }
         @keyframes fadeExit { from { opacity: 1; } to { opacity: 0; } }
         
+        /* Button width follows its actual contents. Equal padding on both sides avoids lopsided empty space. */
+        .expanding-note-button {
+          box-sizing: border-box;
+          width: max-content;
+          max-width: 48px;
+          padding-left: 12px;
+          padding-right: 12px;
+          transition: max-width 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+                      background-color 0.3s, box-shadow 0.3s;
+        }
+        .expanding-note-button:hover,
+        .expanding-note-button:focus-visible {
+          max-width: 220px;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .expanding-note-button { transition: none; }
+        }
+
         .animate-modal-enter { animation: modalEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; }
         .animate-modal-exit { animation: modalExit 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; }
         .animate-fade-enter { animation: fadeEnter 0.3s ease-out both; }
