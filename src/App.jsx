@@ -338,7 +338,7 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
             type="button"
             onClick={onAddNote}
             aria-label="新增筆記"
-            className="group absolute right-0 top-0 z-30 flex h-12 w-12 items-center gap-3 overflow-hidden whitespace-nowrap rounded-full bg-orange-500 px-3 text-white shadow-lg shadow-orange-500/20 transition-[width,background-color,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:w-44 hover:bg-orange-600 hover:shadow-orange-500/30 focus-visible:w-44 focus-visible:bg-orange-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/20 motion-reduce:transition-none"
+            className="group absolute right-0 top-0 z-30 flex h-12 w-12 items-center gap-3 overflow-hidden whitespace-nowrap rounded-full bg-orange-500 px-3 text-white shadow-lg shadow-orange-500/20 transition-[width,background-color,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:w-[120px] hover:bg-orange-600 hover:shadow-orange-500/30 focus-visible:w-[120px] focus-visible:bg-orange-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/20 motion-reduce:transition-none"
           >
             <Plus
               size={24}
