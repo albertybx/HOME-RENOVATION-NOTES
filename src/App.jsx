@@ -338,13 +338,13 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
             type="button"
             onClick={onAddNote}
             aria-label="新增筆記"
-            className="group absolute right-0 top-0 z-30 flex h-12 w-12 items-center gap-1 overflow-hidden whitespace-nowrap rounded-full bg-orange-500 px-3 text-white shadow-lg shadow-orange-500/20 transition-[width,background-color,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:w-[112px] hover:bg-orange-600 hover:shadow-orange-500/30 focus-visible:w-[112px] focus-visible:bg-orange-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/20 motion-reduce:transition-none"
+            className="group absolute right-0 top-0 z-30 flex h-12 w-12 items-center gap-0 overflow-hidden whitespace-nowrap rounded-full bg-orange-500 px-3 text-white shadow-lg shadow-orange-500/20 transition-[width,background-color,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:w-[112px] hover:bg-orange-600 hover:shadow-orange-500/30 focus-visible:w-[112px] focus-visible:bg-orange-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/20 motion-reduce:transition-none"
           >
             <Plus
               size={24}
               className="shrink-0 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:rotate-90 group-focus-visible:rotate-90 motion-reduce:transition-none"
             />
-            <span className="shrink-0 text-sm font-bold tracking-wide opacity-0 transition-opacity duration-200 delay-0 group-hover:opacity-100 group-hover:delay-200 group-focus-visible:opacity-100 group-focus-visible:delay-200 motion-reduce:transition-none">
+            <span className="-ml-1 shrink-0 text-sm font-bold tracking-wide opacity-0 transition-opacity duration-200 delay-0 group-hover:opacity-100 group-hover:delay-200 group-focus-visible:opacity-100 group-focus-visible:delay-200 motion-reduce:transition-none">
               新增筆記
             </span>
           </button>
