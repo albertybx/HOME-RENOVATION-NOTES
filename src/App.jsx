@@ -333,13 +333,22 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
           </div>
         </div>
         
-        <button 
-          onClick={onAddNote}
-          className="hidden md:flex items-center justify-center w-12 h-12 bg-orange-500 hover:bg-orange-600 text-white rounded-full transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 hover:-translate-y-0.5"
-          title="新增諮詢筆記"
-        >
-          <Plus size={24} />
-        </button>
+        <div className="relative hidden md:block h-12 w-12 shrink-0">
+          <button
+            type="button"
+            onClick={onAddNote}
+            aria-label="新增筆記"
+            className="group absolute right-0 top-0 z-30 flex h-12 w-12 items-center gap-3 overflow-hidden whitespace-nowrap rounded-full bg-orange-500 px-3 text-white shadow-lg shadow-orange-500/20 transition-[width,background-color,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:w-44 hover:bg-orange-600 hover:shadow-orange-500/30 focus-visible:w-44 focus-visible:bg-orange-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/20 motion-reduce:transition-none"
+          >
+            <Plus
+              size={24}
+              className="shrink-0 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:rotate-90 group-focus-visible:rotate-90 motion-reduce:transition-none"
+            />
+            <span className="shrink-0 text-sm font-bold tracking-wide opacity-0 transition-opacity duration-200 delay-0 group-hover:opacity-100 group-hover:delay-200 group-focus-visible:opacity-100 group-focus-visible:delay-200 motion-reduce:transition-none">
+              新增筆記
+            </span>
+          </button>
+        </div>
       </header>
 
       <div className="relative flex-1 overflow-hidden flex flex-col">
