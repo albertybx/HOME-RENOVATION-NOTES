@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import StaggeredNoteGrid from './StaggeredNoteGrid.jsx';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { 
@@ -294,6 +295,7 @@ const Sidebar = ({
 const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNote, onDeleteNote, onEditNote }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewingNote, setViewingNote] = useState(null);
+  const scrollContainerRef = useRef(null);
   
   const activeCategoryLabel = activeCategory === 'all' 
     ? '所有筆記' : categories.find(c => c.id === activeCategory)?.label || '未命名分類';
@@ -342,7 +344,7 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
       </header>
 
       <div className="relative flex-1 overflow-hidden flex flex-col">
-        <div className="flex-1 p-4 sm:p-8 lg:px-16 xl:px-24 custom-scrollbar z-0 overflow-y-auto">
+        <div ref={scrollContainerRef} className="flex-1 p-4 sm:p-8 lg:px-16 xl:px-24 custom-scrollbar z-0 overflow-y-auto">
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-orange-500"></div>
@@ -364,16 +366,18 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
               )}
             </div>
           ) : (
-            <div className="columns-1 md:columns-2 2xl:columns-3 gap-6 pb-20 space-y-6">
-              {filteredNotes.map(note => (
-                <NoteCard 
-                  key={note.id} note={note} 
-                  categoryLabel={categories.find(c => c.id === note.category)?.label || '未知分類'}
-                  onDelete={onDeleteNote} onEdit={onEditNote} 
-                  onView={() => setViewingNote(note)}
-                />
+            <StaggeredNoteGrid scrollerRef={scrollContainerRef} animationKey={filteredNotes.map(note => note.id).join('|')}>
+              {filteredNotes.map((note, index) => (
+                <div key={note.id} data-note-card data-stagger-index={index} className="min-w-0">
+                  <NoteCard
+                    note={note}
+                    categoryLabel={categories.find(c => c.id === note.category)?.label || '未知分類'}
+                    onDelete={onDeleteNote} onEdit={onEditNote}
+                    onView={() => setViewingNote(note)}
+                  />
+                </div>
               ))}
-            </div>
+            </StaggeredNoteGrid>
           )}
         </div>
 
@@ -487,10 +491,10 @@ const NoteCard = ({ note, categoryLabel, onDelete, onEdit, onView }) => {
   return (
     <div 
       onClick={onView}
-      className="group relative flex flex-col overflow-hidden bg-white/60 backdrop-blur-xl border border-white/60 rounded-3xl shadow-[0_10px_30px_-10px_rgba(0,0,0,0.08)] hover:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)] hover:-translate-y-2 hover:bg-white/80 transition-all duration-300 ease-out cursor-pointer break-inside-avoid mb-6 w-full"
+      className="group relative flex flex-col overflow-hidden bg-white/60 backdrop-blur-xl border border-white/60 rounded-3xl shadow-[0_10px_30px_-10px_rgba(0,0,0,0.08)] hover:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)] hover:-translate-y-2 hover:bg-white/80 transition-all duration-300 ease-out cursor-pointer w-full h-full"
     >
       {note.imageUrl && (
-        <div className="h-36 w-full overflow-hidden bg-slate-100 relative shrink-0">
+        <div data-note-media className="h-36 w-full overflow-hidden bg-slate-100 relative shrink-0">
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent z-10 opacity-60"></div>
            <img src={note.imageUrl} alt="Reference" className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/400x200?text=No+Image"; }} />
           <div className="absolute top-4 right-4 z-20">
@@ -501,12 +505,12 @@ const NoteCard = ({ note, categoryLabel, onDelete, onEdit, onView }) => {
       
       <div className="px-7 pt-5 pb-4 flex flex-col flex-1 relative z-0">
         {!note.imageUrl && (
-          <div className="mb-5"><span className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100/80 text-slate-600 border border-slate-200 tracking-wide">{categoryLabel}</span></div>
+          <div data-note-category className="mb-5"><span className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100/80 text-slate-600 border border-slate-200 tracking-wide">{categoryLabel}</span></div>
         )}
-        <h3 className="font-bold text-xl text-slate-800 mb-2 leading-relaxed tracking-tight line-clamp-1">{displayTitle}</h3>
-        {displayOverview && <div className="mb-4 text-slate-500 text-sm leading-relaxed border-l-2 border-slate-300 pl-3 line-clamp-2">{displayOverview}</div>}
+        <h3 data-note-title className="font-bold text-xl text-slate-800 mb-2 leading-relaxed tracking-tight line-clamp-1">{displayTitle}</h3>
+        {displayOverview && <div data-note-summary className="mb-4 text-slate-500 text-sm leading-relaxed border-l-2 border-slate-300 pl-3 line-clamp-2">{displayOverview}</div>}
 
-        <div className="mt-auto pt-3 border-t border-slate-200/60 flex items-center justify-between">
+        <div data-note-footer className="mt-auto pt-3 border-t border-slate-200/60 flex items-center justify-between">
           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             {note.sourceUrl && (
               <a href={note.sourceUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-slate-400 hover:text-orange-500 transition-colors text-sm font-bold px-2 py-1 rounded-lg hover:bg-orange-50/50" title="查看來源連結">
