@@ -345,7 +345,7 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
               size={24}
               className="shrink-0 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:rotate-90 group-focus-visible:rotate-90 motion-reduce:transition-none"
             />
-            <span className="-ml-1 shrink-0 text-sm font-bold tracking-wide opacity-0 transition-opacity duration-200 delay-0 group-hover:opacity-100 group-hover:delay-200 group-focus-visible:opacity-100 group-focus-visible:delay-200 motion-reduce:transition-none">
+            <span className="-ml-[2px] shrink-0 text-sm font-bold tracking-wide opacity-0 transition-opacity duration-200 delay-0 group-hover:opacity-100 group-hover:delay-200 group-focus-visible:opacity-100 group-focus-visible:delay-200 motion-reduce:transition-none">
               新增筆記
             </span>
           </button>
