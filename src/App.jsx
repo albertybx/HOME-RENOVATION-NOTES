@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import StaggeredNoteGrid from './StaggeredNoteGrid.jsx';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
@@ -432,13 +433,22 @@ const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
     setTimeout(() => onDelete(note.id), 300);
   };
 
-  return (
-    <div 
-      className={`absolute inset-0 bg-black/25 z-[60] flex items-center justify-center p-4 sm:p-6 backdrop-blur-sm ${isClosing ? 'animate-fade-exit' : 'animate-fade-enter'}`}
+  return createPortal(
+    <div
+      role="presentation"
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-3 sm:p-6 backdrop-blur-sm ${isClosing ? 'animate-fade-exit' : 'animate-fade-enter'}`}
+      style={{
+        height: '100dvh',
+        paddingTop: 'max(12px, env(safe-area-inset-top))',
+        paddingBottom: 'max(12px, env(safe-area-inset-bottom))'
+      }}
       onClick={(e) => { e.stopPropagation(); handleCloseAnim(); }}
     >
-      <div 
-        className={`bg-white rounded-3xl w-full max-w-xl sm:max-w-2xl max-h-[95%] shadow-2xl flex flex-col relative origin-center transform-gpu will-change-[transform,opacity] ${isClosing ? 'animate-modal-exit' : 'animate-modal-enter'}`}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="筆記內容"
+        className={`relative flex h-full min-h-0 w-full max-w-xl origin-center transform-gpu flex-col rounded-3xl bg-white shadow-2xl will-change-[transform,opacity] sm:h-auto sm:max-h-[95%] sm:max-w-2xl ${isClosing ? 'animate-modal-exit' : 'animate-modal-enter'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <button 
@@ -449,7 +459,7 @@ const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
           <X size={20} />
         </button>
 
-        <div className="overflow-y-auto overscroll-contain custom-scrollbar flex flex-col w-full h-full rounded-3xl">
+        <div className="custom-scrollbar flex min-h-0 w-full flex-1 flex-col overflow-y-auto overscroll-contain rounded-3xl">
           {note.imageUrl && (
             <div className="w-full h-56 sm:h-72 shrink-0 relative bg-slate-100">
               <img src={note.imageUrl} alt="Reference" className="w-full h-full object-cover" onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/800x450?text=No+Image"; }} />
@@ -490,7 +500,8 @@ const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
