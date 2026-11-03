@@ -295,7 +295,6 @@ const Sidebar = ({
 const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNote, onDeleteNote, onEditNote }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewingNote, setViewingNote] = useState(null);
-  const scrollContainerRef = useRef(null);
   
   const activeCategoryLabel = activeCategory === 'all' 
     ? '所有筆記' : categories.find(c => c.id === activeCategory)?.label || '未命名分類';
@@ -344,12 +343,14 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
       </header>
 
       <div className="relative flex-1 overflow-hidden flex flex-col">
-        <div ref={scrollContainerRef} className="flex-1 p-4 sm:p-8 lg:px-16 xl:px-24 custom-scrollbar z-0 overflow-y-auto">
+        <div className="flex-1 p-4 sm:p-8 lg:px-16 xl:px-24 custom-scrollbar z-0 overflow-y-auto">
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-orange-500"></div>
             </div>
-          ) : filteredNotes.length === 0 ? (
+          ) : (
+            <>
+              {filteredNotes.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full pb-20 text-slate-400">
               {categories.length === 0 ? (
                 <>
@@ -365,8 +366,8 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
                 </>
               )}
             </div>
-          ) : (
-            <StaggeredNoteGrid scrollerRef={scrollContainerRef} animationKey={filteredNotes.map(note => note.id).join('|')}>
+              )}
+            <StaggeredNoteGrid animationKey={activeCategory} empty={filteredNotes.length === 0}>
               {filteredNotes.map((note, index) => (
                 <div key={note.id} data-note-card data-stagger-index={index} className="min-w-0">
                   <NoteCard
@@ -378,6 +379,7 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
                 </div>
               ))}
             </StaggeredNoteGrid>
+            </>
           )}
         </div>
 
