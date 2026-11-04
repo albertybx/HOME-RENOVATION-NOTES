@@ -80,12 +80,12 @@ This typically indicates that your device does not have a healthy Internet conne
         /* The mobile reader fills the viewport, so 4% desktop scaling is barely visible.
            Give phones an explicit in/out scale while keeping the 300ms exit synced with backdrop. */
         @keyframes mobileModalEnter {
-          from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.92); }
+          from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.5); }
           to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
         }
         @keyframes mobileModalExit {
           from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-          to { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.92); }
+          to { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.5); }
         }
         @media (max-width: 767px) {
           .animate-modal-enter { animation-name: mobileModalEnter; }
