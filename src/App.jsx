@@ -437,7 +437,7 @@ const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
           can leave backdrop-filter visually active until unmount, causing a delayed flash. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
+        className={`pointer-events-none absolute inset-0 ${isClosing ? "" : "mobile-note-backdrop-enter"}`}
         style={{
           backgroundColor: isClosing ? 'rgba(0, 0, 0, 0)' : 'rgba(0, 0, 0, 0.4)',
           backdropFilter: isClosing ? 'blur(0px)' : 'blur(4px)',
@@ -923,12 +923,18 @@ export default function App() {
           from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
           to { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.5); }
         }
+        /* Opening mobile backdrop must start transparent, not appear fully dark in frame one. */
+        @keyframes mobileNoteBackdropEnter {
+          from { background-color: rgba(0, 0, 0, 0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
+          to { background-color: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+        }
         @media (max-width: 767px) {
+          .mobile-note-backdrop-enter { animation: mobileNoteBackdropEnter 500ms cubic-bezier(0.45, 0, 0.55, 1) both; }
           .animate-modal-enter { animation: mobileModalEnter 500ms cubic-bezier(0.45, 0, 0.55, 1) both; }
           .animate-modal-exit { animation: mobileModalExit 400ms cubic-bezier(0.45, 0, 0.55, 1) both; }
         }
         @media (prefers-reduced-motion: reduce) {
-          .animate-modal-enter, .animate-modal-exit, .animate-fade-enter, .animate-fade-exit {
+          .animate-modal-enter, .animate-modal-exit, .animate-fade-enter, .animate-fade-exit, .mobile-note-backdrop-enter {
             animation-duration: 0.01ms;
           }
         }
