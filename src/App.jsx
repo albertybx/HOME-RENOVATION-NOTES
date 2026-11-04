@@ -928,7 +928,8 @@ export default function App() {
         }
         .expanding-note-button:hover,
         .expanding-note-button:focus-visible {
-          width: 124px;
+          /* Reserve generous space after the text instead of crowding the pill edge. */
+          width: 144px;
         }
         @media (prefers-reduced-motion: reduce) {
           .expanding-note-button { transition: none; }
