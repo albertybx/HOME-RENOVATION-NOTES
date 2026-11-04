@@ -70,26 +70,28 @@ This typically indicates that your device does not have a healthy Internet conne
         @keyframes fadeEnter { from { opacity: 0; } to { opacity: 1; } }
         @keyframes fadeExit { from { opacity: 1; } to { opacity: 0; } }
         
-        /* Match the expanded pill to the actual icon + gap + label width.
-           The natural width ensures exactly 12px padding on both sides. */
+        /* Two intrinsic-width columns give the pill mathematically equal outer spacing:
+           12px left + 24px icon + 8px gap + label width + 12px right. */
         .expanding-note-button {
           box-sizing: border-box;
+          display: grid;
+          grid-template-columns: 24px max-content;
+          align-items: center;
+          justify-content: start;
+          column-gap: 8px;
           width: max-content;
           max-width: 48px;
           padding-inline: 12px;
-          gap: 8px;
-          justify-content: flex-start;
           transition: max-width 0.5s cubic-bezier(0.22, 1, 0.36, 1),
                       background-color 0.3s, box-shadow 0.3s;
         }
         .expanding-note-button > svg {
+          display: block;
           width: 24px;
           height: 24px;
-          flex: 0 0 24px;
         }
         .expanding-note-button > span {
           display: block;
-          flex: 0 0 auto;
           white-space: nowrap;
         }
         .expanding-note-button:hover,
