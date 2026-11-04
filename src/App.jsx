@@ -430,10 +430,17 @@ const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
       }}
       onClick={(e) => { e.stopPropagation(); handleCloseAnim(); }}
     >
-      {/* Single backdrop: stay steady on opening, fade darkness and blur in sync with modal exit. */}
+      {/* Animate darkness and blur separately. Fading the entire blurred layer's opacity
+          can leave backdrop-filter visually active until unmount, causing a delayed flash. */}
       <div
         aria-hidden="true"
-        className={`pointer-events-none absolute inset-0 bg-black/40 backdrop-blur-sm ${isClosing ? 'animate-fade-exit' : ''}`}
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundColor: isClosing ? 'rgba(0, 0, 0, 0)' : 'rgba(0, 0, 0, 0.4)',
+          backdropFilter: isClosing ? 'blur(0px)' : 'blur(4px)',
+          WebkitBackdropFilter: isClosing ? 'blur(0px)' : 'blur(4px)',
+          transition: 'background-color 300ms ease-in-out, backdrop-filter 300ms ease-in-out, -webkit-backdrop-filter 300ms ease-in-out'
+        }}
       />
       <div
         role="dialog"
