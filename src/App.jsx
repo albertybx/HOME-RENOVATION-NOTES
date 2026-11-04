@@ -514,12 +514,12 @@ const NoteCard = ({ note, categoryLabel, onDelete, onEdit, onView, isViewing }) 
   return (
     <div 
       onClick={onView}
-      className={`group relative flex flex-col overflow-hidden bg-white/60 backdrop-blur-xl border border-white/60 rounded-3xl shadow-[0_10px_30px_-10px_rgba(0,0,0,0.08)] hover:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)] hover:-translate-y-2 hover:bg-white/80 transition-all duration-300 ease-out cursor-pointer w-full h-full ${isViewing ? "-translate-y-2 bg-white/80 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)]" : ""}`}
+      className={`group relative flex flex-col overflow-hidden bg-white/60 backdrop-blur-xl border border-white/60 rounded-3xl shadow-[0_10px_30px_-10px_rgba(0,0,0,0.08)] md:hover:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)] md:hover:-translate-y-2 md:hover:bg-white/80 transition-all duration-300 ease-out cursor-pointer w-full h-full ${isViewing ? "md:-translate-y-2 md:bg-white/80 md:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)]" : ""}`}
     >
       {note.imageUrl && (
         <div data-note-media className="h-36 w-full overflow-hidden bg-slate-100 relative shrink-0">
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent z-10 opacity-60"></div>
-           <img src={note.imageUrl} alt="Reference" className={`w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ${isViewing ? "scale-105" : ""}`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/400x200?text=No+Image"; }} />
+           <img src={note.imageUrl} alt="Reference" className={`w-full h-full object-cover transform md:group-hover:scale-105 transition-transform duration-700 ${isViewing ? "md:scale-105" : ""}`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/400x200?text=No+Image"; }} />
           <div className="absolute top-4 right-4 z-20">
              <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-white/90 text-slate-800 shadow-lg backdrop-blur-md border border-white/50 tracking-wide">{categoryLabel}</span>
           </div>
