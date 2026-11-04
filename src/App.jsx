@@ -430,8 +430,11 @@ const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
       }}
       onClick={(e) => { e.stopPropagation(); handleCloseAnim(); }}
     >
-      {/* One steady backdrop. Avoid stacking two darkening layers or animating blur. */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      {/* Single backdrop: stay steady on opening, fade darkness and blur in sync with modal exit. */}
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-0 bg-black/40 backdrop-blur-sm ${isClosing ? 'animate-fade-exit' : ''}`}
+      />
       <div
         role="dialog"
         aria-modal="true"
