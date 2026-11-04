@@ -379,13 +379,16 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
           )}
         </div>
 
-        <ViewNoteModal 
-          note={viewingNote}
-          categoryLabel={viewingNote ? (categories.find(c => c.id === viewingNote.category)?.label || '未知分類') : ''}
-          onClose={() => setViewingNote(null)}
-          onEdit={(note) => { setViewingNote(null); onEditNote(note); }}
-          onDelete={(id) => { setViewingNote(null); onDeleteNote(id); }}
-        />
+        {viewingNote && (
+          <ViewNoteModal
+            key={viewingNote.id}
+            note={viewingNote}
+            categoryLabel={categories.find(c => c.id === viewingNote.category)?.label || '未知分類'}
+            onClose={() => setViewingNote(null)}
+            onEdit={(note) => { setViewingNote(null); onEditNote(note); }}
+            onDelete={(id) => { setViewingNote(null); onDeleteNote(id); }}
+          />
+        )}
       </div>
     </div>
   );
@@ -394,10 +397,6 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
 // 2.5 View Note Modal Component
 const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
   const [isClosing, setIsClosing] = useState(false);
-
-  useEffect(() => {
-    if (note) setIsClosing(false);
-  }, [note]);
 
   if (!note) return null;
   const displayTitle = note.title || note.question;
