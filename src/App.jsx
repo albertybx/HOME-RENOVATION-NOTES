@@ -430,8 +430,8 @@ const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
       }}
       onClick={(e) => { e.stopPropagation(); handleCloseAnim(); }}
     >
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-black/30 backdrop-blur-sm" />
-      <div aria-hidden="true" className={`pointer-events-none absolute inset-0 bg-black/10 ${isClosing ? 'animate-fade-exit' : 'animate-fade-enter'}`} />
+      {/* One steady backdrop. Avoid stacking two darkening layers or animating blur. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
         role="dialog"
         aria-modal="true"
@@ -887,7 +887,7 @@ export default function App() {
           to { opacity: 1; transform: translate3d(0, 0, 0); }
         }
         @keyframes modalExit {
-          from { opacity: 1; transform: scale(1) translateY(0); }
+          from { opacity: 1; transform: translate3d(0, 0, 0); }
           to { opacity: 0; transform: translate3d(0, 8px, 0); }
         }
         @keyframes fadeEnter { from { opacity: 0; } to { opacity: 1; } }
