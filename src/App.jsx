@@ -928,11 +928,12 @@ export default function App() {
         .expanding-note-button > span {
           display: block;
           white-space: nowrap;
+          /* Count the visible trailing space as part of the label's intrinsic width. */
+          padding-right: 8px;
         }
         .expanding-note-button:hover,
         .expanding-note-button:focus-visible {
           max-width: 200px;
-          padding-right: calc(12px + 3pt);
         }
         @media (prefers-reduced-motion: reduce) {
           .expanding-note-button { transition: none; }
