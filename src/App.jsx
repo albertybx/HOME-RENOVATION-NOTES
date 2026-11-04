@@ -422,7 +422,7 @@ const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
   return createPortal(
     <div
       role="presentation"
-      className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-3 sm:p-6 backdrop-blur-sm ${isClosing ? 'animate-fade-exit' : 'animate-fade-enter'}`}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6"
       style={{
         height: '100dvh',
         paddingTop: 'max(12px, env(safe-area-inset-top))',
@@ -430,11 +430,13 @@ const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
       }}
       onClick={(e) => { e.stopPropagation(); handleCloseAnim(); }}
     >
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-black/30 backdrop-blur-sm" />
+      <div aria-hidden="true" className={`pointer-events-none absolute inset-0 bg-black/10 ${isClosing ? 'animate-fade-exit' : 'animate-fade-enter'}`} />
       <div
         role="dialog"
         aria-modal="true"
         aria-label="筆記內容"
-        className={`relative flex h-full min-h-0 w-full max-w-xl origin-center transform-gpu flex-col rounded-3xl bg-white shadow-2xl will-change-[transform,opacity] sm:h-auto sm:max-h-[95%] sm:max-w-2xl ${isClosing ? 'animate-modal-exit' : 'animate-modal-enter'}`}
+        className={`relative z-10 flex h-full min-h-0 w-full max-w-xl transform-gpu flex-col rounded-3xl bg-white shadow-2xl will-change-[transform,opacity] sm:h-auto sm:max-h-[95%] sm:max-w-2xl ${isClosing ? 'animate-modal-exit' : 'animate-modal-enter'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <button 
@@ -881,20 +883,25 @@ export default function App() {
         .rich-text-content li { margin-bottom: 0.5em; }
 
         @keyframes modalEnter {
-          from { opacity: 0; transform: scale(0.65) translateY(20px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
+          from { opacity: 0; transform: translate3d(0, 12px, 0); }
+          to { opacity: 1; transform: translate3d(0, 0, 0); }
         }
         @keyframes modalExit {
           from { opacity: 1; transform: scale(1) translateY(0); }
-          to { opacity: 0; transform: scale(0.65) translateY(20px); }
+          to { opacity: 0; transform: translate3d(0, 8px, 0); }
         }
         @keyframes fadeEnter { from { opacity: 0; } to { opacity: 1; } }
         @keyframes fadeExit { from { opacity: 1; } to { opacity: 0; } }
         
-        .animate-modal-enter { animation: modalEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; }
+        .animate-modal-enter { animation: modalEnter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; will-change: transform, opacity; }
         .animate-modal-exit { animation: modalExit 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; }
-        .animate-fade-enter { animation: fadeEnter 0.3s ease-out both; }
+        .animate-fade-enter { animation: fadeEnter 0.25s ease-out both; }
         .animate-fade-exit { animation: fadeExit 0.3s ease-in both; }
+        @media (prefers-reduced-motion: reduce) {
+          .animate-modal-enter, .animate-modal-exit, .animate-fade-enter, .animate-fade-exit {
+            animation-duration: 0.01ms;
+          }
+        }
       `}</style>
 
       <div className="md:hidden fixed top-7 right-4 z-40 flex flex-col gap-4 items-center">
