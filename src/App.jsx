@@ -400,7 +400,7 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
 // 2.5 View Note Modal Component
 const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
   const [isClosing, setIsClosing] = useState(false);
-  const exitDuration = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches ? 500 : 300;
+  const exitDuration = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches ? 400 : 300;
 
   if (!note) return null;
   const displayTitle = note.title || note.question;
@@ -924,8 +924,8 @@ export default function App() {
           to { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.5); }
         }
         @media (max-width: 767px) {
-          .animate-modal-enter { animation: mobileModalEnter 650ms cubic-bezier(0.45, 0, 0.55, 1) both; }
-          .animate-modal-exit { animation: mobileModalExit 500ms cubic-bezier(0.45, 0, 0.55, 1) both; }
+          .animate-modal-enter { animation: mobileModalEnter 500ms cubic-bezier(0.45, 0, 0.55, 1) both; }
+          .animate-modal-exit { animation: mobileModalExit 400ms cubic-bezier(0.45, 0, 0.55, 1) both; }
         }
         @media (prefers-reduced-motion: reduce) {
           .animate-modal-enter, .animate-modal-exit, .animate-fade-enter, .animate-fade-exit {
