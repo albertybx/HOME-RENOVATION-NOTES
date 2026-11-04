@@ -371,6 +371,7 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
                     categoryLabel={categories.find(c => c.id === note.category)?.label || '未知分類'}
                     onDelete={onDeleteNote} onEdit={onEditNote}
                     onView={() => setViewingNote(note)}
+                    isViewing={viewingNote?.id === note.id}
                   />
                 </div>
               ))}
@@ -493,19 +494,19 @@ const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
 };
 
 // 3. NoteCard Component
-const NoteCard = ({ note, categoryLabel, onDelete, onEdit, onView }) => {
+const NoteCard = ({ note, categoryLabel, onDelete, onEdit, onView, isViewing }) => {
   const displayTitle = note.title || note.question;
   const displayOverview = note.title ? note.question : null;
 
   return (
     <div 
       onClick={onView}
-      className="group relative flex flex-col overflow-hidden bg-white/60 backdrop-blur-xl border border-white/60 rounded-3xl shadow-[0_10px_30px_-10px_rgba(0,0,0,0.08)] hover:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)] hover:-translate-y-2 hover:bg-white/80 transition-all duration-300 ease-out cursor-pointer w-full h-full"
+      className={`group relative flex flex-col overflow-hidden bg-white/60 backdrop-blur-xl border border-white/60 rounded-3xl shadow-[0_10px_30px_-10px_rgba(0,0,0,0.08)] hover:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)] hover:-translate-y-2 hover:bg-white/80 transition-all duration-300 ease-out cursor-pointer w-full h-full ${isViewing ? "-translate-y-2 bg-white/80 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)]" : ""}`}
     >
       {note.imageUrl && (
         <div data-note-media className="h-36 w-full overflow-hidden bg-slate-100 relative shrink-0">
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent z-10 opacity-60"></div>
-           <img src={note.imageUrl} alt="Reference" className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/400x200?text=No+Image"; }} />
+           <img src={note.imageUrl} alt="Reference" className={`w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ${isViewing ? "scale-105" : ""}`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/400x200?text=No+Image"; }} />
           <div className="absolute top-4 right-4 z-20">
              <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-white/90 text-slate-800 shadow-lg backdrop-blur-md border border-white/50 tracking-wide">{categoryLabel}</span>
           </div>
@@ -882,13 +883,14 @@ export default function App() {
         .rich-text-content li { margin-bottom: 0.5em; }
 
         /* Stable note popup: no scale, overshoot or reverse motion. */
+        /* Opacity-only modal animation avoids a transform/compositor jump on first frame. */
         @keyframes modalEnter {
-          from { opacity: 0; transform: translate3d(0, 8px, 0); }
-          to { opacity: 1; transform: translate3d(0, 0, 0); }
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
         @keyframes modalExit {
-          from { opacity: 1; transform: translate3d(0, 0, 0); }
-          to { opacity: 0; transform: translate3d(0, 6px, 0); }
+          from { opacity: 1; }
+          to { opacity: 0; }
         }
         @keyframes fadeEnter { from { opacity: 0; } to { opacity: 1; } }
         @keyframes fadeExit { from { opacity: 1; } to { opacity: 0; } }
