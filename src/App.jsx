@@ -400,7 +400,7 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
 // 2.5 View Note Modal Component
 const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
   const [isClosing, setIsClosing] = useState(false);
-  const exitDuration = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches ? 400 : 300;
+  const exitDuration = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches ? 200 : 300;
 
   if (!note) return null;
   const displayTitle = note.title || note.question;
@@ -929,9 +929,9 @@ export default function App() {
           to { background-color: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
         }
         @media (max-width: 767px) {
-          .mobile-note-backdrop-enter { animation: mobileNoteBackdropEnter 500ms cubic-bezier(0.45, 0, 0.55, 1) both; }
-          .animate-modal-enter { animation: mobileModalEnter 500ms cubic-bezier(0.45, 0, 0.55, 1) both; }
-          .animate-modal-exit { animation: mobileModalExit 400ms cubic-bezier(0.45, 0, 0.55, 1) both; }
+          .mobile-note-backdrop-enter { animation: mobileNoteBackdropEnter 300ms cubic-bezier(0.45, 0, 0.55, 1) both; }
+          .animate-modal-enter { animation: mobileModalEnter 300ms cubic-bezier(0.45, 0, 0.55, 1) both; }
+          .animate-modal-exit { animation: mobileModalExit 200ms cubic-bezier(0.45, 0, 0.55, 1) both; }
         }
         @media (prefers-reduced-motion: reduce) {
           .animate-modal-enter, .animate-modal-exit, .animate-fade-enter, .animate-fade-exit, .mobile-note-backdrop-enter {
