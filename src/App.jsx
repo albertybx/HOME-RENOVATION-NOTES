@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import StaggeredNoteGrid from './StaggeredNoteGrid.jsx';
 import AddNoteButton from './AddNoteButton.jsx';
@@ -299,6 +299,7 @@ const Sidebar = ({
 const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNote, onDeleteNote, onEditNote }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewingNote, setViewingNote] = useState(null);
+  const [viewingOriginRect, setViewingOriginRect] = useState(null);
   
   const activeCategoryLabel = activeCategory === 'all' 
     ? '所有筆記' : categories.find(c => c.id === activeCategory)?.label || '未命名分類';
@@ -372,7 +373,11 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
                     note={note}
                     categoryLabel={categories.find(c => c.id === note.category)?.label || '未知分類'}
                     onDelete={onDeleteNote} onEdit={onEditNote}
-                    onView={() => setViewingNote(note)}
+                    onView={(event) => {
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      setViewingOriginRect({ left: rect.left, top: rect.top, width: rect.width, height: rect.height });
+                      setViewingNote(note);
+                    }}
                     isViewing={viewingNote?.id === note.id}
                   />
                 </div>
@@ -386,6 +391,7 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
           <ViewNoteModal
             key={viewingNote.id}
             note={viewingNote}
+            originRect={viewingOriginRect}
             categoryLabel={categories.find(c => c.id === viewingNote.category)?.label || '未知分類'}
             onClose={() => setViewingNote(null)}
             onEdit={(note) => { setViewingNote(null); onEditNote(note); }}
@@ -398,28 +404,60 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
 };
 
 // 2.5 View Note Modal Component
-const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
+const ViewNoteModal = ({ note, originRect, categoryLabel, onClose, onEdit, onDelete }) => {
   const [isClosing, setIsClosing] = useState(false);
+  const dialogRef = useRef(null);
+  const entranceRef = useRef(null);
+  const closingRef = useRef(false);
+  const duration = 550;
+  const flipEnabled = () => originRect && window.matchMedia('(max-width: 767px)').matches
+    && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // FLIP: measure the reading dialog and invert its geometry to the tapped thumbnail
+  // before first paint. Animate to its natural centered layout without reflow.
+  useLayoutEffect(() => {
+    if (!note || !flipEnabled() || !dialogRef.current?.animate) return;
+    const node = dialogRef.current;
+    const target = node.getBoundingClientRect();
+    const from = `translate3d(${originRect.left - target.left}px, ${originRect.top - target.top}px, 0) scale(${originRect.width / target.width}, ${originRect.height / target.height})`;
+    const animation = node.animate([
+      { transform: from, opacity: 0.65 },
+      { transform: 'translate3d(0, 0, 0) scale(1)', opacity: 1 }
+    ], { duration, easing: 'cubic-bezier(0.65, 0, 0.35, 1)', fill: 'both' });
+    entranceRef.current = animation;
+    animation.finished.then(() => {
+      node.style.opacity = '1';
+      animation.cancel();
+    }).catch(() => {});
+    return () => animation.cancel();
+  }, [note, originRect]);
 
   if (!note) return null;
   const displayTitle = note.title || note.question;
   const displayOverview = note.title ? note.question : null;
 
-  const handleCloseAnim = () => {
-    if (isClosing) return;
+  const dismiss = (done) => {
+    if (closingRef.current) return;
+    closingRef.current = true;
     setIsClosing(true);
-    setTimeout(() => onClose(), 300);
+    const node = dialogRef.current;
+    if (flipEnabled() && node?.animate) {
+      entranceRef.current?.cancel();
+      node.style.opacity = '1';
+      const target = node.getBoundingClientRect();
+      const to = `translate3d(${originRect.left - target.left}px, ${originRect.top - target.top}px, 0) scale(${originRect.width / target.width}, ${originRect.height / target.height})`;
+      const animation = node.animate([
+        { transform: 'translate3d(0, 0, 0) scale(1)', opacity: 1 },
+        { transform: to, opacity: 0.65 }
+      ], { duration, easing: 'cubic-bezier(0.65, 0, 0.35, 1)', fill: 'both' });
+      animation.finished.then(done).catch(() => {});
+    } else {
+      setTimeout(done, 300);
+    }
   };
-  const handleEditAnim = () => {
-    if (isClosing) return;
-    setIsClosing(true);
-    setTimeout(() => onEdit(note), 300);
-  };
-  const handleDeleteAnim = () => {
-    if (isClosing) return;
-    setIsClosing(true);
-    setTimeout(() => onDelete(note.id), 300);
-  };
+  const handleCloseAnim = () => dismiss(onClose);
+  const handleEditAnim = () => dismiss(() => onEdit(note));
+  const handleDeleteAnim = () => dismiss(() => onDelete(note.id));
 
   return createPortal(
     <div
@@ -436,7 +474,7 @@ const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
           can leave backdrop-filter visually active until unmount, causing a delayed flash. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
+        className={`pointer-events-none absolute inset-0 ${originRect ? (isClosing ? "mobile-lightbox-backdrop-exit" : "mobile-lightbox-backdrop-enter") : ""}`}
         style={{
           backgroundColor: isClosing ? 'rgba(0, 0, 0, 0)' : 'rgba(0, 0, 0, 0.4)',
           backdropFilter: isClosing ? 'blur(0px)' : 'blur(4px)',
@@ -445,10 +483,11 @@ const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
         }}
       />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="筆記內容"
-        className={`relative z-10 flex h-full min-h-0 w-full max-w-xl origin-center transform-gpu flex-col rounded-3xl bg-white shadow-2xl will-change-[transform,opacity] sm:h-auto sm:max-h-[95%] sm:max-w-2xl ${isClosing ? 'animate-modal-exit' : 'animate-modal-enter'}`}
+        className={`relative z-10 flex h-full min-h-0 w-full max-w-xl origin-center transform-gpu flex-col rounded-3xl bg-white shadow-2xl will-change-[transform,opacity] sm:h-auto sm:max-h-[95%] sm:max-w-2xl ${originRect ? "mobile-lightbox-dialog" : ""} ${isClosing ? 'animate-modal-exit' : 'animate-modal-enter'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <button 
@@ -462,7 +501,7 @@ const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
         <div className="custom-scrollbar flex min-h-0 w-full flex-1 flex-col overflow-y-auto overscroll-contain rounded-3xl">
           {note.imageUrl && (
             <div className="w-full h-56 sm:h-72 shrink-0 relative bg-slate-100">
-              <img src={note.imageUrl} alt="Reference" className="w-full h-full object-cover" onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/800x450?text=No+Image"; }} />
+              <img src={note.imageUrl} alt="Reference" onClick={(event) => { if (window.matchMedia("(max-width: 767px)").matches) { event.stopPropagation(); handleCloseAnim(); } }} className="w-full h-full object-cover" onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/800x450?text=No+Image"; }} />
               <div className="absolute top-4 left-4 z-20">
                  <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-white/95 text-slate-800 shadow-lg backdrop-blur-md border border-white/50 tracking-wide">{categoryLabel}</span>
               </div>
@@ -912,19 +951,26 @@ export default function App() {
         .animate-modal-exit { animation: modalExit 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; }
         .animate-fade-enter { animation: fadeEnter 0.25s ease-out both; }
         .animate-fade-exit { animation: fadeExit 0.3s ease-in both; }
-        /* The mobile reader fills the viewport, so 4% desktop scaling is barely visible.
-           Give phones an explicit in/out scale while keeping the 300ms exit synced with backdrop. */
-        @keyframes mobileModalEnter {
-          from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.92); }
-          to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        /* Mobile lightbox: JavaScript performs viewport-accurate FLIP transitions. */
+        @keyframes mobileLightboxBackdropIn {
+          from { background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
+          to { background-color: rgba(0,0,0,0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
         }
-        @keyframes mobileModalExit {
-          from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-          to { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.92); }
+        @keyframes mobileLightboxBackdropOut {
+          from { background-color: rgba(0,0,0,0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+          to { background-color: rgba(0,0,0,0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
         }
         @media (max-width: 767px) {
-          .animate-modal-enter { animation-name: mobileModalEnter; }
-          .animate-modal-exit { animation-name: mobileModalExit; }
+          .mobile-lightbox-dialog.animate-modal-enter,
+          .mobile-lightbox-dialog.animate-modal-exit { animation: none; transform-origin: top left; }
+          .mobile-lightbox-dialog.animate-modal-enter { opacity: 0; }
+          .mobile-lightbox-dialog.animate-modal-exit { opacity: 1; }
+          .mobile-lightbox-backdrop-enter { animation: mobileLightboxBackdropIn 550ms cubic-bezier(0.65, 0, 0.35, 1) both; }
+          .mobile-lightbox-backdrop-exit { animation: mobileLightboxBackdropOut 550ms cubic-bezier(0.65, 0, 0.35, 1) both; }
+        }
+        @media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+          .mobile-lightbox-dialog.animate-modal-enter { opacity: 1; }
+          .mobile-lightbox-backdrop-enter, .mobile-lightbox-backdrop-exit { animation-duration: 0.01ms; }
         }
         @media (prefers-reduced-motion: reduce) {
           .animate-modal-enter, .animate-modal-exit, .animate-fade-enter, .animate-fade-exit {
