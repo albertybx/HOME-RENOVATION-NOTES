@@ -436,7 +436,7 @@ const ViewNoteModal = ({ note, categoryLabel, onClose, onEdit, onDelete }) => {
         role="dialog"
         aria-modal="true"
         aria-label="筆記內容"
-        className={`relative z-10 flex h-full min-h-0 w-full max-w-xl transform-gpu flex-col rounded-3xl bg-white shadow-2xl will-change-[transform,opacity] sm:h-auto sm:max-h-[95%] sm:max-w-2xl ${isClosing ? 'animate-modal-exit' : 'animate-modal-enter'}`}
+        className={`relative z-10 flex h-full min-h-0 w-full max-w-xl origin-center transform-gpu flex-col rounded-3xl bg-white shadow-2xl will-change-[transform,opacity] sm:h-auto sm:max-h-[95%] sm:max-w-2xl ${isClosing ? 'animate-modal-exit' : 'animate-modal-enter'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <button 
@@ -884,18 +884,19 @@ export default function App() {
 
         /* Stable note popup: no scale, overshoot or reverse motion. */
         /* Opacity-only modal animation avoids a transform/compositor jump on first frame. */
+        /* Motion Library #205-inspired pop: scale smoothly, never overshoot or reverse. */
         @keyframes modalEnter {
-          from { opacity: 0; }
-          to { opacity: 1; }
+          from { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.96); }
+          to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
         }
         @keyframes modalExit {
-          from { opacity: 1; }
-          to { opacity: 0; }
+          from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+          to { opacity: 0; transform: translate3d(0, 6px, 0) scale(0.98); }
         }
         @keyframes fadeEnter { from { opacity: 0; } to { opacity: 1; } }
         @keyframes fadeExit { from { opacity: 1; } to { opacity: 0; } }
         
-        .animate-modal-enter { animation: modalEnter 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; will-change: transform, opacity; }
+        .animate-modal-enter { animation: modalEnter 0.36s cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; }
         .animate-modal-exit { animation: modalExit 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; }
         .animate-fade-enter { animation: fadeEnter 0.25s ease-out both; }
         .animate-fade-exit { animation: fadeExit 0.3s ease-in both; }
