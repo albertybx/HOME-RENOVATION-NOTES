@@ -882,20 +882,19 @@ export default function App() {
         .rich-text-content ol { list-style-type: decimal; padding-left: 1.2em; margin-bottom: 0.6em; }
         .rich-text-content li { margin-bottom: 0.5em; }
 
-        /* Gentle spring-like modal reveal; the backdrop never animates. */
+        /* Stable note popup: no scale, overshoot or reverse motion. */
         @keyframes modalEnter {
-          0% { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.96); }
-          72% { opacity: 1; transform: translate3d(0, -1px, 0) scale(1.006); }
-          100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+          from { opacity: 0; transform: translate3d(0, 8px, 0); }
+          to { opacity: 1; transform: translate3d(0, 0, 0); }
         }
         @keyframes modalExit {
-          from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-          to { opacity: 0; transform: translate3d(0, 6px, 0) scale(0.98); }
+          from { opacity: 1; transform: translate3d(0, 0, 0); }
+          to { opacity: 0; transform: translate3d(0, 6px, 0); }
         }
         @keyframes fadeEnter { from { opacity: 0; } to { opacity: 1; } }
         @keyframes fadeExit { from { opacity: 1; } to { opacity: 0; } }
         
-        .animate-modal-enter { animation: modalEnter 0.36s cubic-bezier(0.22, 1, 0.36, 1) both; will-change: transform, opacity; }
+        .animate-modal-enter { animation: modalEnter 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; will-change: transform, opacity; }
         .animate-modal-exit { animation: modalExit 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; }
         .animate-fade-enter { animation: fadeEnter 0.25s ease-out both; }
         .animate-fade-exit { animation: fadeExit 0.3s ease-in both; }
