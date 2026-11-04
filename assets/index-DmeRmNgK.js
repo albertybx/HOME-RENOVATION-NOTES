@@ -70,19 +70,30 @@ This typically indicates that your device does not have a healthy Internet conne
         @keyframes fadeEnter { from { opacity: 0; } to { opacity: 1; } }
         @keyframes fadeExit { from { opacity: 1; } to { opacity: 0; } }
         
-        /* Button width follows its actual contents. Equal padding on both sides avoids lopsided empty space. */
+        /* Keep icon and label a fixed 8px apart. Only the outer width animates. */
         .expanding-note-button {
           box-sizing: border-box;
-          width: max-content;
-          max-width: 48px;
-          padding-left: 12px;
-          padding-right: 12px;
-          transition: max-width 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+          width: 48px;
+          min-width: 48px;
+          padding-inline: 12px;
+          gap: 8px;
+          justify-content: flex-start;
+          transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1),
                       background-color 0.3s, box-shadow 0.3s;
+        }
+        .expanding-note-button > svg {
+          width: 24px;
+          height: 24px;
+          flex: 0 0 24px;
+        }
+        .expanding-note-button > span {
+          display: block;
+          flex: 0 0 auto;
+          white-space: nowrap;
         }
         .expanding-note-button:hover,
         .expanding-note-button:focus-visible {
-          max-width: 220px;
+          width: 124px;
         }
         @media (prefers-reduced-motion: reduce) {
           .expanding-note-button { transition: none; }
