@@ -905,15 +905,16 @@ export default function App() {
         @keyframes fadeEnter { from { opacity: 0; } to { opacity: 1; } }
         @keyframes fadeExit { from { opacity: 1; } to { opacity: 0; } }
         
-        /* Keep icon and label a fixed 8px apart. Only the outer width animates. */
+        /* Match the expanded pill to the actual icon + gap + label width.
+           The natural width ensures exactly 12px padding on both sides. */
         .expanding-note-button {
           box-sizing: border-box;
-          width: 48px;
-          min-width: 48px;
+          width: max-content;
+          max-width: 48px;
           padding-inline: 12px;
           gap: 8px;
           justify-content: flex-start;
-          transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+          transition: max-width 0.5s cubic-bezier(0.22, 1, 0.36, 1),
                       background-color 0.3s, box-shadow 0.3s;
         }
         .expanding-note-button > svg {
@@ -928,8 +929,7 @@ export default function App() {
         }
         .expanding-note-button:hover,
         .expanding-note-button:focus-visible {
-          /* Reserve generous space after the text instead of crowding the pill edge. */
-          width: 144px;
+          max-width: 200px;
         }
         @media (prefers-reduced-motion: reduce) {
           .expanding-note-button { transition: none; }
