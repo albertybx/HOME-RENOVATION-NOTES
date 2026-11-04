@@ -934,6 +934,7 @@ export default function App() {
         .expanding-note-button:hover,
         .expanding-note-button:focus-visible {
           max-width: 200px;
+          padding-inline: calc(12px + 1.5pt);
         }
         @media (prefers-reduced-motion: reduce) {
           .expanding-note-button { transition: none; }
