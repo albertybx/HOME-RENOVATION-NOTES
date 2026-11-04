@@ -912,6 +912,20 @@ export default function App() {
         .animate-modal-exit { animation: modalExit 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; }
         .animate-fade-enter { animation: fadeEnter 0.25s ease-out both; }
         .animate-fade-exit { animation: fadeExit 0.3s ease-in both; }
+        /* The mobile reader fills the viewport, so 4% desktop scaling is barely visible.
+           Give phones an explicit in/out scale while keeping the 300ms exit synced with backdrop. */
+        @keyframes mobileModalEnter {
+          from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.92); }
+          to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        }
+        @keyframes mobileModalExit {
+          from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+          to { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.92); }
+        }
+        @media (max-width: 767px) {
+          .animate-modal-enter { animation-name: mobileModalEnter; }
+          .animate-modal-exit { animation-name: mobileModalExit; }
+        }
         @media (prefers-reduced-motion: reduce) {
           .animate-modal-enter, .animate-modal-exit, .animate-fade-enter, .animate-fade-exit {
             animation-duration: 0.01ms;
