@@ -198,13 +198,15 @@ const Sidebar = ({
 
   return (
     <>
-      {isOpen && (
-        <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-20 md:hidden" onClick={() => setIsOpen(false)} />
-      )}
+      <div
+        aria-hidden="true"
+        className={`fixed inset-0 z-20 bg-slate-900/20 backdrop-blur-sm transition-opacity duration-300 ease-in-out md:hidden ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => setIsOpen(false)}
+      />
       <div className={`
         fixed md:static inset-y-0 left-0 z-30 w-72 
         bg-white/40 backdrop-blur-2xl border-r border-white/50
-        text-slate-700 transform transition-transform duration-300 ease-in-out
+        text-slate-700 transform-gpu will-change-transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         md:translate-x-0 flex flex-col h-full shadow-[4px_0_24px_rgba(0,0,0,0.02)]
       `}>
