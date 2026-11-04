@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import StaggeredNoteGrid from './StaggeredNoteGrid.jsx';
+import AddNoteButton from './AddNoteButton.jsx';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { 
@@ -334,22 +335,7 @@ const MainContent = ({ user, notes, loading, activeCategory, categories, onAddNo
           </div>
         </div>
         
-        <div className="relative hidden md:block h-12 w-12 shrink-0">
-          <button
-            type="button"
-            onClick={onAddNote}
-            aria-label="新增筆記"
-            className="expanding-note-button group absolute right-0 top-0 z-30 flex h-12 items-center gap-2 overflow-hidden whitespace-nowrap rounded-full bg-orange-500 text-white shadow-lg shadow-orange-500/20 hover:bg-orange-600 hover:shadow-orange-500/30 focus-visible:bg-orange-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/20 motion-reduce:transition-none"
-          >
-            <Plus
-              size={24}
-              className="shrink-0 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:rotate-90 group-focus-visible:rotate-90 motion-reduce:transition-none"
-            />
-            <span className="shrink-0 text-sm font-bold tracking-wide opacity-0 transition-opacity duration-200 delay-0 group-hover:opacity-100 group-hover:delay-200 group-focus-visible:opacity-100 group-focus-visible:delay-200 motion-reduce:transition-none">
-              新增筆記
-            </span>
-          </button>
-        </div>
+        <AddNoteButton onClick={onAddNote} />
       </header>
 
       <div className="relative flex-1 overflow-hidden flex flex-col">
@@ -905,41 +891,6 @@ export default function App() {
         @keyframes fadeEnter { from { opacity: 0; } to { opacity: 1; } }
         @keyframes fadeExit { from { opacity: 1; } to { opacity: 0; } }
         
-        /* Two intrinsic-width columns give the pill mathematically equal outer spacing:
-           12px left + 24px icon + 8px gap + label width + 12px right. */
-        .expanding-note-button {
-          box-sizing: border-box;
-          display: grid;
-          grid-template-columns: 24px max-content;
-          align-items: center;
-          justify-content: start;
-          column-gap: 8px;
-          width: max-content;
-          max-width: 48px;
-          padding-inline: 12px;
-          transition: max-width 0.5s cubic-bezier(0.22, 1, 0.36, 1),
-                      background-color 0.3s, box-shadow 0.3s;
-        }
-        .expanding-note-button > svg {
-          display: block;
-          width: 24px;
-          height: 24px;
-        }
-        .expanding-note-button > span {
-          display: block;
-          white-space: nowrap;
-          /* Count the visible trailing space as part of the label's intrinsic width. */
-          padding-right: 8px;
-        }
-        .expanding-note-button:hover,
-        .expanding-note-button:focus-visible {
-          max-width: 200px;
-          padding-inline: calc(12px + 1.5pt);
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .expanding-note-button { transition: none; }
-        }
-
         .animate-modal-enter { animation: modalEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; }
         .animate-modal-exit { animation: modalExit 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; }
         .animate-fade-enter { animation: fadeEnter 0.3s ease-out both; }
