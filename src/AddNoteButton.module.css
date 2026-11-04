@@ -1,0 +1,82 @@
+/*
+ * LOCKED VISUAL SPEC for desktop add-note button.
+ * Collapsed circle: 48px, icon: 24px, icon-label gap: 8px.
+ * Outer padding: 12px collapsed, +1.5pt each side when expanded.
+ * Label trailing buffer: 8px (critical to the approved right-hand spacing).
+ * Keep this stylesheet scoped. Do not replace with generic Tailwind button styles.
+ */
+.anchor {
+  position: relative;
+  display: none;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+@media (min-width: 768px) {
+  .anchor { display: block; }
+}
+.button {
+  box-sizing: border-box;
+  position: absolute;
+  z-index: 30;
+  top: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: 24px max-content;
+  align-items: center;
+  justify-content: start;
+  column-gap: 8px;
+  width: max-content;
+  max-width: 48px;
+  height: 48px;
+  padding-inline: 12px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 9999px;
+  white-space: nowrap;
+  background-color: #f97316;
+  color: #fff;
+  box-shadow: 0 10px 15px -3px rgb(249 115 22 / 20%), 0 4px 6px -4px rgb(249 115 22 / 20%);
+  cursor: pointer;
+  transition: max-width 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+              background-color 0.3s, box-shadow 0.3s;
+}
+.button:hover,
+.button:focus-visible {
+  max-width: 200px;
+  padding-inline: calc(12px + 1.5pt);
+  background-color: #ea580c;
+  box-shadow: 0 10px 15px -3px rgb(249 115 22 / 30%), 0 4px 6px -4px rgb(249 115 22 / 30%);
+}
+.button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgb(249 115 22 / 20%);
+}
+.icon {
+  display: block;
+  width: 24px;
+  height: 24px;
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.button:hover .icon,
+.button:focus-visible .icon { transform: rotate(90deg); }
+.label {
+  display: block;
+  padding-right: 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  opacity: 0;
+  transition: opacity 0.2s;
+  transition-delay: 0s;
+}
+.button:hover .label,
+.button:focus-visible .label {
+  opacity: 1;
+  transition-delay: 0.2s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .button, .icon, .label { transition: none; }
+}
